@@ -12,6 +12,8 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -41,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, remember: boolean = false) => {
     try {
-      // Mock login - replace with actual API call
+      // Replace with your actual API call
       const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
         setTimeout(() => {
           resolve({
@@ -72,6 +74,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signUp = async (name: string, email: string, password: string) => {
+    try {
+      // Replace with your actual API call
+      const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
+        setTimeout(() => {
+          resolve({
+            accessToken: 'mock-jwt-token-' + Date.now(),
+            user: {
+              id: '1',
+              email,
+              name,
+              role: 'admin'
+            }
+          });
+        }, 1500);
+      });
+
+      const { accessToken, user: userData } = response;
+      
+      setToken(accessToken);
+      setUser(userData);
+      sessionStorage.setItem('accessToken', accessToken);
+    } catch (error) {
+      throw new Error('Sign up failed');
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    try {
+      // Replace with your actual Google OAuth implementation
+      // This would typically open a popup or redirect to Google OAuth
+      const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
+        setTimeout(() => {
+          resolve({
+            accessToken: 'mock-google-jwt-token-' + Date.now(),
+            user: {
+              id: '1',
+              email: 'user@gmail.com',
+              name: 'Google User',
+              role: 'admin'
+            }
+          });
+        }, 2000);
+      });
+
+      const { accessToken, user: userData } = response;
+      
+      setToken(accessToken);
+      setUser(userData);
+      sessionStorage.setItem('accessToken', accessToken);
+    } catch (error) {
+      throw new Error('Google sign in failed');
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -83,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     token,
     login,
+    signUp,
+    loginWithGoogle,
     logout,
     loading,
   };
