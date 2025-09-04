@@ -1,20 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Chip,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import {
-  ContentCopy,
-  Refresh,
-  CheckCircle,
-  Warning,
-  Error,
-} from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Copy, RefreshCw, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const mockCredentials = {
   spf: 'v=spf1 include:_spf.google.com ~all',
@@ -42,6 +32,7 @@ const mockDnsStatus = {
 export default function Credentials() {
   const [checking, setChecking] = useState(false);
   const [dnsStatus, setDnsStatus] = useState(mockDnsStatus);
+  const { toast } = useToast();
 
   const handleCheckDns = async () => {
     setChecking(true);
@@ -60,204 +51,180 @@ export default function Credentials() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    // Show toast notification
+    toast({
+      title: "Copied to clipboard",
+      description: "DNS record has been copied to your clipboard.",
+    });
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'verified':
-        return <CheckCircle color="success" />;
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'pending':
-        return <Warning color="warning" />;
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
       case 'error':
-        return <Error color="error" />;
+        return <X className="h-4 w-4 text-red-500" />;
       default:
-        return <Warning color="warning" />;
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case 'verified':
-        return 'success';
+        return 'default' as const;
       case 'pending':
-        return 'warning';
+        return 'secondary' as const;
       case 'error':
-        return 'error';
+        return 'destructive' as const;
       default:
-        return 'default';
+        return 'secondary' as const;
     }
   };
 
   return (
-    <Box>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-        <Typography variant="h4" fontWeight="bold">
-          DNS Credentials
-        </Typography>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">DNS Credentials</h1>
         <Button
-          variant="outlined"
-          startIcon={checking ? <CircularProgress size={16} /> : <Refresh />}
+          variant="outline"
           onClick={handleCheckDns}
           disabled={checking}
+          className="gap-2"
         >
+          {checking ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
           {checking ? 'Checking DNS...' : 'Recheck DNS'}
         </Button>
-      </Box>
+      </div>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        DNS changes can take up to 24 hours to propagate. Make sure to add these records to your DNS provider.
+      <Alert>
+        <AlertDescription>
+          DNS changes can take up to 24 hours to propagate. Make sure to add these records to your DNS provider.
+        </AlertDescription>
       </Alert>
 
-      <Box display="flex" flexDirection="column" gap={3}>
+      <div className="space-y-6">
         {/* SPF Record */}
-        <Paper sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="h6">SPF Record</Typography>
-            <Chip
-              icon={getStatusIcon(dnsStatus.spf)}
-              label={dnsStatus.spf}
-              color={getStatusColor(dnsStatus.spf) as any}
-              variant="outlined"
-            />
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            TXT Record for @ (root domain)
-          </Typography>
-          
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: 'grey.900',
-              borderRadius: 1,
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              wordBreak: 'break-all',
-              mb: 2,
-            }}
-          >
-            {mockCredentials.spf}
-          </Box>
-          
-          <Button
-            startIcon={<ContentCopy />}
-            onClick={() => handleCopy(mockCredentials.spf)}
-          >
-            Copy SPF Record
-          </Button>
-        </Paper>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>SPF Record</CardTitle>
+              <Badge variant={getStatusVariant(dnsStatus.spf)} className="gap-1">
+                {getStatusIcon(dnsStatus.spf)}
+                {dnsStatus.spf}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              TXT Record for @ (root domain)
+            </p>
+            
+            <div className="bg-muted p-4 rounded-md font-mono text-sm break-all">
+              {mockCredentials.spf}
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => handleCopy(mockCredentials.spf)}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy SPF Record
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* DKIM Record */}
-        <Paper sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="h6">DKIM Record</Typography>
-            <Chip
-              icon={getStatusIcon(dnsStatus.dkim)}
-              label={dnsStatus.dkim}
-              color={getStatusColor(dnsStatus.dkim) as any}
-              variant="outlined"
-            />
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            TXT Record for {mockCredentials.dkim.selector}._domainkey
-          </Typography>
-          
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: 'grey.900',
-              borderRadius: 1,
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              wordBreak: 'break-all',
-              mb: 2,
-            }}
-          >
-            {mockCredentials.dkim.record}
-          </Box>
-          
-          <Button
-            startIcon={<ContentCopy />}
-            onClick={() => handleCopy(mockCredentials.dkim.record)}
-          >
-            Copy DKIM Record
-          </Button>
-        </Paper>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>DKIM Record</CardTitle>
+              <Badge variant={getStatusVariant(dnsStatus.dkim)} className="gap-1">
+                {getStatusIcon(dnsStatus.dkim)}
+                {dnsStatus.dkim}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              TXT Record for {mockCredentials.dkim.selector}._domainkey
+            </p>
+            
+            <div className="bg-muted p-4 rounded-md font-mono text-sm break-all">
+              {mockCredentials.dkim.record}
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => handleCopy(mockCredentials.dkim.record)}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy DKIM Record
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Tracking Domain */}
-        <Paper sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="h6">Tracking Domain</Typography>
-            <Chip
-              icon={getStatusIcon(dnsStatus.tracking)}
-              label={dnsStatus.tracking}
-              color={getStatusColor(dnsStatus.tracking) as any}
-              variant="outlined"
-            />
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            CNAME Record for tracking domain
-          </Typography>
-          
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: 'grey.900',
-              borderRadius: 1,
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              wordBreak: 'break-all',
-              mb: 2,
-            }}
-          >
-            {mockCredentials.tracking.cname}
-          </Box>
-          
-          <Button
-            startIcon={<ContentCopy />}
-            onClick={() => handleCopy(mockCredentials.tracking.cname)}
-          >
-            Copy CNAME Record
-          </Button>
-        </Paper>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Tracking Domain</CardTitle>
+              <Badge variant={getStatusVariant(dnsStatus.tracking)} className="gap-1">
+                {getStatusIcon(dnsStatus.tracking)}
+                {dnsStatus.tracking}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              CNAME Record for tracking domain
+            </p>
+            
+            <div className="bg-muted p-4 rounded-md font-mono text-sm break-all">
+              {mockCredentials.tracking.cname}
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => handleCopy(mockCredentials.tracking.cname)}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy CNAME Record
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* SMTP Configuration */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" mb={2}>
-            SMTP Configuration
-          </Typography>
-          
-          <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(150px, 1fr))" gap={2}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Host
-              </Typography>
-              <Typography variant="body1" fontFamily="monospace">
-                {mockCredentials.smtp.host}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Port
-              </Typography>
-              <Typography variant="body1" fontFamily="monospace">
-                {mockCredentials.smtp.port}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Username
-              </Typography>
-              <Typography variant="body1" fontFamily="monospace">
-                {mockCredentials.smtp.username}
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    </Box>
+        <Card>
+          <CardHeader>
+            <CardTitle>SMTP Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Host</p>
+                <p className="font-mono text-sm">{mockCredentials.smtp.host}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Port</p>
+                <p className="font-mono text-sm">{mockCredentials.smtp.port}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Username</p>
+                <p className="font-mono text-sm">{mockCredentials.smtp.username}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
