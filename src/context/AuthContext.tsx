@@ -29,39 +29,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setToken(session.access_token);
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
-          role: 'user'
-        });
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setToken(session.access_token);
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+            role: 'user'
+          });
+        }
+      } catch (error) {
+        console.log('Supabase not configured yet');
       }
       setLoading(false);
     };
 
     getInitialSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        setToken(session.access_token);
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
-          role: 'user'
-        });
-      } else {
-        setToken(null);
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    // Listen for auth changes only if Supabase is configured
+    let subscription: any = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session) {
+          setToken(session.access_token);
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+            role: 'user'
+          });
+        } else {
+          setToken(null);
+          setUser(null);
+        }
+        setLoading(false);
+      });
+      subscription = data.subscription;
+    } catch (error) {
+      console.log('Supabase auth listener not available');
+    }
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string, remember: boolean = false) => {

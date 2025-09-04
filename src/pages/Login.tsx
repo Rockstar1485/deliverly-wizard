@@ -18,6 +18,7 @@ import {
 import { Google } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SupabaseSetupNotice } from '../components/SupabaseSetupNotice';
 import { LoginSchema, SignUpSchema, LoginFormData, SignUpFormData } from '../schemas/auth';
 
 export default function Login() {
@@ -96,6 +97,7 @@ export default function Login() {
 
   return (
     <Container component="main" maxWidth="sm">
+      <SupabaseSetupNotice />
       <Box
         sx={{
           minHeight: '100vh',
