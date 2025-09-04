@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '../lib/axios';
+import { supabase } from '../lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -26,114 +27,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored token on app initialization
-    const storedToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    if (storedToken) {
-      setToken(storedToken);
-      // In a real app, you'd validate the token and fetch user data
-      setUser({
-        id: '1',
-        email: 'user@example.com',
-        name: 'John Doe',
-        role: 'admin'
-      });
-    }
-    setLoading(false);
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+          role: 'user'
+        });
+      }
+      setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+          role: 'user'
+        });
+      } else {
+        setToken(null);
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string, remember: boolean = false) => {
     try {
-      // Replace with your actual API call
-      const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            accessToken: 'mock-jwt-token-' + Date.now(),
-            user: {
-              id: '1',
-              email,
-              name: 'John Doe',
-              role: 'admin'
-            }
-          });
-        }, 1000);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const { accessToken, user: userData } = response;
-      
-      setToken(accessToken);
-      setUser(userData);
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      // Store token based on remember preference
-      if (remember) {
-        localStorage.setItem('accessToken', accessToken);
-      } else {
-        sessionStorage.setItem('accessToken', accessToken);
+      if (data.session) {
+        setToken(data.session.access_token);
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || '',
+          role: 'user'
+        });
       }
     } catch (error) {
-      throw new Error('Invalid credentials');
+      throw new Error(error instanceof Error ? error.message : 'Invalid credentials');
     }
   };
 
   const signUp = async (name: string, email: string, password: string) => {
     try {
-      // Replace with your actual API call
-      const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            accessToken: 'mock-jwt-token-' + Date.now(),
-            user: {
-              id: '1',
-              email,
-              name,
-              role: 'admin'
-            }
-          });
-        }, 1500);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          }
+        }
       });
 
-      const { accessToken, user: userData } = response;
-      
-      setToken(accessToken);
-      setUser(userData);
-      sessionStorage.setItem('accessToken', accessToken);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.session) {
+        setToken(data.session.access_token);
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          name: name,
+          role: 'user'
+        });
+      }
     } catch (error) {
-      throw new Error('Sign up failed');
+      throw new Error(error instanceof Error ? error.message : 'Sign up failed');
     }
   };
 
   const loginWithGoogle = async () => {
     try {
-      // Replace with your actual Google OAuth implementation
-      // This would typically open a popup or redirect to Google OAuth
-      const response = await new Promise<{ accessToken: string; user: User }>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            accessToken: 'mock-google-jwt-token-' + Date.now(),
-            user: {
-              id: '1',
-              email: 'user@gmail.com',
-              name: 'Google User',
-              role: 'admin'
-            }
-          });
-        }, 2000);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
 
-      const { accessToken, user: userData } = response;
-      
-      setToken(accessToken);
-      setUser(userData);
-      sessionStorage.setItem('accessToken', accessToken);
+      if (error) {
+        throw new Error(error.message);
+      }
     } catch (error) {
-      throw new Error('Google sign in failed');
+      throw new Error(error instanceof Error ? error.message : 'Google sign in failed');
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('accessToken');
-    sessionStorage.removeItem('accessToken');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setToken(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const value = {
