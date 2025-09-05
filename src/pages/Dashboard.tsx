@@ -1,214 +1,371 @@
-import React from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Paper,
-  Chip,
-} from '@mui/material';
-import {
-  TrendingUp,
-  Email,
-  Block,
-  ReportProblem,
-  OpenInNew,
-  Mouse,
-} from '@mui/icons-material';
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { 
+  BarChart3, 
+  FileSpreadsheet, 
+  UploadCloud, 
+  TrendingUp, 
+  CheckCircle, 
+  AlertTriangle, 
+  XCircle,
+  HelpCircle,
+  Activity,
+  Zap
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import SummaryCard from "@/components/SummaryCard";
+import { getSummary, exportCsvUrl, exportJsonUrl } from "@/lib/api";
 
-// Mock data
-const kpiData = {
-  deliverabilityScore: { value: 92, change: '+2.1%', period: '24h' },
-  sendVolume: { value: '12.4K', change: '+8.3%', period: '24h' },
-  bounceRate: { value: '2.1%', change: '-0.3%', period: '24h' },
-  spamRate: { value: '0.8%', change: '-0.1%', period: '24h' },
-  openRate: { value: '24.7%', change: '+1.2%', period: '24h' },
-  clickRate: { value: '3.2%', change: '+0.4%', period: '24h' },
+type Summary = {
+  job_id: string;
+  total: number;
+  deliverable: number;
+  undeliverable: number;
+  risky: number;
+  unknown: number;
 };
 
-const timeSeriesData = [
-  { date: '2024-01-01', sends: 1200, opens: 300, clicks: 38 },
-  { date: '2024-01-02', sends: 1800, opens: 450, clicks: 58 },
-  { date: '2024-01-03', sends: 1600, opens: 400, clicks: 52 },
-  { date: '2024-01-04', sends: 2200, opens: 550, clicks: 71 },
-  { date: '2024-01-05', sends: 2000, opens: 500, clicks: 65 },
-  { date: '2024-01-06', sends: 1900, opens: 475, clicks: 61 },
-  { date: '2024-01-07', sends: 2400, opens: 600, clicks: 78 },
-];
-
-const providerData = [
-  { name: 'Gmail', value: 45, color: '#EA4335' },
-  { name: 'Outlook', value: 30, color: '#0078D4' },
-  { name: 'Yahoo', value: 15, color: '#720E9E' },
-  { name: 'Other', value: 10, color: '#34A853' },
-];
-
-interface KPICardProps {
-  title: string;
-  value: string;
-  change: string;
-  period: string;
-  icon: React.ReactNode;
-  isPositive?: boolean;
-}
-
-function KPICard({ title, value, change, period, icon, isPositive = true }: KPICardProps) {
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="between" mb={2}>
-          <Box display="flex" alignItems="center" gap={1}>
-            {icon}
-            <Typography variant="body2" color="text.secondary">
-              {title}
-            </Typography>
-          </Box>
-          <Chip
-            label={`${period}`}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.7rem' }}
-          />
-        </Box>
-        
-        <Typography variant="h4" fontWeight="bold" mb={1}>
-          {value}
-        </Typography>
-        
-        <Typography
-          variant="body2"
-          color={isPositive ? 'success.main' : 'error.main'}
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <TrendingUp fontSize="small" />
-          {change}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function Dashboard() {
+  const [lastJobId, setLastJobId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
+
+  useEffect(() => {
+    const id = localStorage.getItem("deliverly.lastJobId");
+    setLastJobId(id);
+    (async () => {
+      if (id) {
+        try {
+          const s = await getSummary(id);
+          setSummary(s);
+        } catch {
+          // ignore for now
+        }
+      }
+    })();
+  }, []);
+
+  const getSuccessRate = () => {
+    if (!summary || summary.total === 0) return 0;
+    return Math.round((summary.deliverable / summary.total) * 100);
+  };
+
+  const getRiskRate = () => {
+    if (!summary || summary.total === 0) return 0;
+    return Math.round(((summary.risky + summary.undeliverable) / summary.total) * 100);
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" fontWeight="bold" mb={3}>
-        Dashboard
-      </Typography>
-      
-      {/* KPI Cards */}
-      <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={3} mb={4}>
-        <KPICard
-          title="Deliverability Score"
-          value={kpiData.deliverabilityScore.value.toString()}
-          change={kpiData.deliverabilityScore.change}
-          period={kpiData.deliverabilityScore.period}
-          icon={<TrendingUp color="success" />}
-        />
-        <KPICard
-          title="Send Volume"
-          value={kpiData.sendVolume.value}
-          change={kpiData.sendVolume.change}
-          period={kpiData.sendVolume.period}
-          icon={<Email color="primary" />}
-        />
-        <KPICard
-          title="Bounce Rate"
-          value={kpiData.bounceRate.value}
-          change={kpiData.bounceRate.change}
-          period={kpiData.bounceRate.period}
-          icon={<Block color="warning" />}
-          isPositive={false}
-        />
-        <KPICard
-          title="Spam Rate"
-          value={kpiData.spamRate.value}
-          change={kpiData.spamRate.change}
-          period={kpiData.spamRate.period}
-          icon={<ReportProblem color="error" />}
-          isPositive={false}
-        />
-        <KPICard
-          title="Open Rate"
-          value={kpiData.openRate.value}
-          change={kpiData.openRate.change}
-          period={kpiData.openRate.period}
-          icon={<OpenInNew color="info" />}
-        />
-        <KPICard
-          title="Click Rate"
-          value={kpiData.clickRate.value}
-          change={kpiData.clickRate.change}
-          period={kpiData.clickRate.period}
-          icon={<Mouse color="secondary" />}
-        />
-      </Box>
+    <div className="min-h-screen">
+      {/* Hero Section with Gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-muted/20 border-b">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent" />
+        <div className="relative mx-auto max-w-6xl px-6 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                  <Activity className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                    Email Validation Dashboard
+                  </h1>
+                  <p className="text-muted-foreground mt-2 text-lg">
+                    Monitor your validation performance and manage your email lists
+                  </p>
+                </div>
+              </div>
+              
+              {/* Quick Stats */}
+              {summary && (
+                <div className="flex items-center gap-6 pt-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                    <span className="text-success font-medium">{getSuccessRate()}% Success Rate</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="font-medium">{summary.total.toLocaleString()} Total Validated</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button size="lg" className="shadow-lg hover:shadow-xl transition-all" asChild>
+                <Link to="/upload-validate">
+                  <UploadCloud className="h-5 w-5 mr-2" />
+                  New Validation
+                </Link>
+              </Button>
+              {lastJobId && (
+                <Button variant="outline" size="lg" className="shadow-sm hover:shadow-lg transition-all" asChild>
+                  <Link to={`/upload-validate/${lastJobId}`}>
+                    <BarChart3 className="h-5 w-5 mr-2" />
+                    View Results
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Charts */}
-      <Box display="grid" gridTemplateColumns={{ xs: '1fr', lg: '2fr 1fr' }} gap={3}>
-        {/* Time Series Chart */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight="bold" mb={3}>
-            Email Activity (Last 7 Days)
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              />
-              <YAxis />
-              <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              />
-              <Area type="monotone" dataKey="sends" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
-              <Area type="monotone" dataKey="opens" stackId="2" stroke="#10B981" fill="#10B981" fillOpacity={0.6} />
-              <Area type="monotone" dataKey="clicks" stackId="3" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.6} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Paper>
+      <div className="mx-auto max-w-6xl p-6 space-y-8">
+        {/* Metrics Cards */}
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="stat-card success-stat accent-stat">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Deliverable</p>
+                    <p className="metric-value">{summary.deliverable.toLocaleString()}</p>
+                    <p className="text-xs text-success mt-1 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      {Math.round((summary.deliverable / summary.total) * 100)}% of total
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-success/10">
+                    <CheckCircle className="h-6 w-6 text-success" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Provider Mix Chart */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight="bold" mb={3}>
-            Mailbox Provider Mix
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={providerData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {providerData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </Paper>
-      </Box>
-    </Box>
+            <Card className="stat-card warning-stat accent-stat">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Risky</p>
+                    <p className="metric-value">{summary.risky.toLocaleString()}</p>
+                    <p className="text-xs text-warning mt-1 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {Math.round((summary.risky / summary.total) * 100)}% of total
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-warning/10">
+                    <AlertTriangle className="h-6 w-6 text-warning" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card accent-stat">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Undeliverable</p>
+                    <p className="metric-value">{summary.undeliverable.toLocaleString()}</p>
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <XCircle className="h-3 w-3" />
+                      {Math.round((summary.undeliverable / summary.total) * 100)}% of total
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-destructive/10">
+                    <XCircle className="h-6 w-6 text-destructive" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card info-stat accent-stat">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Unknown</p>
+                    <p className="metric-value">{summary.unknown.toLocaleString()}</p>
+                    <p className="text-xs text-info mt-1 flex items-center gap-1">
+                      <HelpCircle className="h-3 w-3" />
+                      {Math.round((summary.unknown / summary.total) * 100)}% of total
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-info/10">
+                    <HelpCircle className="h-6 w-6 text-info" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="gradient-card hover:shadow-lg transition-all duration-300 border-0">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <UploadCloud className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle className="text-lg font-semibold">Start Validation</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Upload a CSV file to validate email addresses, check deliverability, and generate insights for your campaigns.
+              </p>
+              <Button asChild className="w-full shadow-sm hover:shadow-md transition-all">
+                <Link to="/upload-validate">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Begin Validation
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="gradient-card hover:shadow-lg transition-all duration-300 border-0">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success/10">
+                  <FileSpreadsheet className="h-5 w-5 text-success" />
+                </div>
+                <CardTitle className="text-lg font-semibold">Export Results</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Download your validation results in CSV or JSON format for integration with your marketing tools.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  asChild 
+                  size="sm" 
+                  disabled={!lastJobId}
+                  className="flex-1 shadow-sm hover:shadow-md transition-all"
+                >
+                  <a href={lastJobId ? exportCsvUrl(lastJobId) : "#"} download>
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                    CSV
+                  </a>
+                </Button>
+                <Button 
+                  asChild 
+                  size="sm" 
+                  variant="secondary" 
+                  disabled={!lastJobId}
+                  className="flex-1 shadow-sm hover:shadow-md transition-all"
+                >
+                  <a
+                    href={lastJobId ? exportJsonUrl(lastJobId) : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    JSON
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="gradient-card hover:shadow-lg transition-all duration-300 border-0">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-info/10">
+                  <TrendingUp className="h-5 w-5 text-info" />
+                </div>
+                <CardTitle className="text-lg font-semibold">Advanced Features</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Enhanced SMTP verification and real-time validation features coming soon.
+              </p>
+              <Button size="sm" variant="outline" disabled className="w-full">
+                <Activity className="h-4 w-4 mr-2" />
+                Coming Soon
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2">
+            <Card className="gradient-card h-full border-0">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold">Validation Summary</CardTitle>
+                  {summary && (
+                    <div className="flex items-center gap-2 text-sm bg-primary/10 px-3 py-1 rounded-full">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      <span className="font-medium">Latest Results</span>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {summary ? (
+                  <SummaryCard
+                    total={summary.total}
+                    deliverable={summary.deliverable}
+                    undeliverable={summary.undeliverable}
+                    risky={summary.risky}
+                    unknown={summary.unknown}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="p-4 rounded-full bg-muted/20 mb-4">
+                      <BarChart3 className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No validation data available yet.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Start your first validation to see detailed analytics here.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-3">
+            <Card className="gradient-card h-full border-0">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold">Optimization Tips</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/20">
+                      <CheckCircle className="h-5 w-5 text-success flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Clean Data</p>
+                        <p className="text-xs text-muted-foreground">Remove duplicates before validation</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-info/5 border border-info/20">
+                      <TrendingUp className="h-5 w-5 text-info flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Regular Updates</p>
+                        <p className="text-xs text-muted-foreground">Re-validate lists monthly</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/5 border border-warning/20">
+                      <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Monitor Risks</p>
+                        <p className="text-xs text-muted-foreground">Review risky addresses carefully</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <Activity className="h-5 w-5 text-primary flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Track Performance</p>
+                        <p className="text-xs text-muted-foreground">Use analytics to improve quality</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
