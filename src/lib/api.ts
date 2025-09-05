@@ -153,3 +153,89 @@ export const emailVerificationApi = {
     return data || [];
   }
 };
+
+// CSV Validation Job API
+export async function createJob(file: File): Promise<{ job_id: string }> {
+  // Mock implementation - in real app, this would upload the file and create a job
+  const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Store job data in localStorage for demo purposes
+  const jobData = {
+    id: jobId,
+    state: 'queued',
+    processed: 0,
+    total: null,
+    started_at: Date.now() / 1000,
+    finished_at: null,
+    file_name: file.name,
+    file_size: file.size,
+    preview: []
+  };
+  
+  localStorage.setItem(`job_${jobId}`, JSON.stringify(jobData));
+  
+  return { job_id: jobId };
+}
+
+export async function getJob(jobId: string): Promise<any> {
+  // Mock implementation - get job from localStorage
+  const jobData = localStorage.getItem(`job_${jobId}`);
+  if (!jobData) {
+    throw new Error('Job not found');
+  }
+  
+  const job = JSON.parse(jobData);
+  
+  // Simulate job progression
+  if (job.state === 'queued') {
+    job.state = 'processing';
+    job.total = 100; // Mock total
+    localStorage.setItem(`job_${jobId}`, JSON.stringify(job));
+  } else if (job.state === 'processing' && job.processed < job.total) {
+    job.processed = Math.min(job.processed + Math.floor(Math.random() * 10) + 1, job.total);
+    if (job.processed >= job.total) {
+      job.state = 'finished';
+      job.finished_at = Date.now() / 1000;
+    }
+    localStorage.setItem(`job_${jobId}`, JSON.stringify(job));
+  }
+  
+  return job;
+}
+
+export async function getResults(jobId: string): Promise<{ results: any[] }> {
+  // Mock results data
+  const mockResults = Array.from({ length: 100 }, (_, i) => ({
+    email: `user${i}@example.com`,
+    status: ['deliverable', 'undeliverable', 'risky'][Math.floor(Math.random() * 3)],
+    first_name: `John${i}`,
+    last_name: `Doe${i}`,
+    company: `Company ${i}`,
+    risk_score: Math.random(),
+  }));
+  
+  return { results: mockResults };
+}
+
+export async function getSummary(jobId: string): Promise<any> {
+  // Mock summary data
+  return {
+    total: 100,
+    deliverable: 75,
+    undeliverable: 15,
+    risky: 8,
+    unknown: 2,
+  };
+}
+
+export function exportCsvUrl(jobId: string): string {
+  // Mock export URL - in real app, this would be an API endpoint
+  return `data:text/csv;charset=utf-8,Email,Status,Name,Company\nuser@example.com,deliverable,John Doe,Example Corp`;
+}
+
+export function exportJsonUrl(jobId: string): string {
+  // Mock export URL - in real app, this would be an API endpoint
+  return `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify([
+    { email: 'user@example.com', status: 'deliverable', name: 'John Doe', company: 'Example Corp' }
+  ]))}`;
+}

@@ -9,6 +9,7 @@ const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const OnboardingShell = React.lazy(() => import('./pages/Onboarding/OnboardingShell'));
 const VerificationShell = React.lazy(() => import('./pages/Verification/VerificationShell'));
+const UploadValidate = React.lazy(() => import('./pages/UploadValidate'));
 const Credentials = React.lazy(() => import('./pages/Credentials'));
 const ListsIndex = React.lazy(() => import('./pages/Lists/ListsIndex'));
 const SettingsIndex = React.lazy(() => import('./pages/Settings/Index'));
@@ -52,6 +53,8 @@ export default function AppRoutes() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="onboarding/*" element={<OnboardingShell />} />
                   <Route path="verification/*" element={<VerificationShell />} />
+                  <Route path="upload-validate" element={<UploadValidate />} />
+                  <Route path="upload-validate/:jobId" element={<UploadValidate />} />
                   <Route path="credentials" element={<Credentials />} />
                   <Route path="lists/*" element={<ListsIndex />} />
                   <Route path="settings" element={<SettingsIndex />} />
